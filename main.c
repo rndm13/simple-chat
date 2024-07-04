@@ -19,6 +19,7 @@
 #define MAX_MESSAGE_SIZE 256
 #define MAX_USER_NAME_SIZE 64
 #define MAX_PACKET_SIZE 1400
+#define MAX_ERROR_INFO_SIZE 128
 
 #define ARRAY_SIZE(X) sizeof(X) / sizeof(*X)
 
@@ -112,8 +113,6 @@ typedef struct ResponseHeader {
     int size;
     ResponseType type;
 } ResponseHeader;
-
-#define MAX_ERROR_INFO_SIZE 128
 
 typedef union ResponseData {
     struct {
@@ -234,6 +233,7 @@ typedef struct Connection {
 } Connection;
 
 void reset_connection(Connection *conn) {
+
     conn->sock = -1;
     memset(&conn->addr, 0, sizeof(conn->addr));
     memset(&conn->user_name, 0, sizeof(conn->user_name));
@@ -265,11 +265,11 @@ int server_init(ServerState *server, const char *host, int port) {
     int err;
     do {
         if (actual_port > port) {
-            printf("WARN: Binding to port %d failed, trying %d\n", actual_port - 1, actual_port);
+            printf("WARN: Binding to port %d failed, trying port %d.\n", actual_port - 1, actual_port);
         }
         server->addr_server.sin_port = htons(actual_port);
 
-        int err = bind(server->sock_server, (struct sockaddr *)&server->addr_server, sizeof(server->addr_server));
+        err = bind(server->sock_server, (struct sockaddr *)&server->addr_server, sizeof(server->addr_server));
 
         actual_port++;
     } while (err < 0 && errno == ERRNO_ADDRESS_ALREADY_IN_USE);
@@ -325,7 +325,6 @@ int server_start(ServerState *server) {
         // clean up disconnected clients
         for (int i = 0; i < server->connection_count; i++) {
             if (server->connections[i].sock < 0) {
-                printf("DEBUG: Cleaned up connection %d\n", i);
                 int last = server->connection_count - 1;
 
                 if (last != i) {
@@ -359,7 +358,6 @@ int server_start(ServerState *server) {
                        (bool)(polls[0].revents & POLLERR),
                        (bool)(polls[0].revents & POLLHUP),
                        (bool)(polls[0].revents & POLLNVAL));
-
                 break;
             }
 
